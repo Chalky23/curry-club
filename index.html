@@ -135,6 +135,13 @@
   .chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:11.5px;color:var(--muted)}
   .rater-notes{margin-top:7px;font-size:13px;color:var(--text);opacity:.92}
 
+  /* attendance */
+  .mchips{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}
+  .mchip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:99px;padding:8px 13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+  .mchip.on{background:var(--burgundy);color:#F3E9D8;border-color:var(--burgundy)}
+  .who-came{margin-top:10px;font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}
+  .who-came .names{color:var(--text)}
+
   .empty{text-align:center;color:var(--muted);padding:34px 10px}
   .empty .big{font-size:34px;margin-bottom:8px}
 
@@ -251,6 +258,8 @@ const state = {
   visits: [],
   ratings: [],
   profiles: {},        // id -> display_name
+  members: [],         // [{id, display_name}] for attendance chips
+  attendances: [],     // who was at each visit
   expanded: null,      // venue id expanded in the ranking
 };
 
@@ -258,15 +267,18 @@ const state = {
    DATA
    ========================================================================== */
 async function loadAll(){
-  const [venues, visits, ratings, profiles] = await Promise.all([
+  const [venues, visits, ratings, profiles, attendances] = await Promise.all([
     sb.from("venues").select("*").order("created_at",{ascending:false}),
     sb.from("visits").select("*").order("visited_on",{ascending:false}),
     sb.from("ratings").select("*"),
     sb.from("profiles").select("id,display_name"),
+    sb.from("attendances").select("*"),   // empty until the migration is run
   ]);
   state.venues   = venues.data   || [];
   state.visits   = visits.data   || [];
   state.ratings  = ratings.data  || [];
+  state.attendances = attendances.data || [];
+  state.members  = (profiles.data || []).slice().sort((a,b)=>(a.display_name||"").localeCompare(b.display_name||""));
   state.profiles = {};
   (profiles.data || []).forEach(p => state.profiles[p.id] = p.display_name);
 }
@@ -504,6 +516,7 @@ function venueCard(r,i){
               </div>
               ${x.notes?`<div class="rater-notes">${esc(x.notes)}</div>`:``}
             </div>`).join("") : `<div class="hint">No ratings yet. Be the first.</div>`}
+          ${whoCameLine(v.id, r.venue.name)}
         </div>`;
       }).join("") : `<div class="hint">No visits logged yet.</div>`}
     </div>` : ``}
@@ -529,6 +542,28 @@ function ratingsForVisit(visitId){
       overall: round1(avg([r.food,r.service,r.value])),
     }))
     .sort((a,b)=>(b.overall||0)-(a.overall||0));
+}
+
+// Attendance helpers.
+function attendeeIdsForVisit(visitId){
+  return state.attendances.filter(a=>a.visit_id===visitId).map(a=>a.member_id);
+}
+function attendeesForVisit(visitId){
+  return attendeeIdsForVisit(visitId).map(id => state.profiles[id] || "Someone");
+}
+function memberChips(selectedIds){
+  const sel = new Set((selectedIds||[]).filter(Boolean));
+  if(!state.members.length) return `<div class="hint">No members have signed up yet.</div>`;
+  return `<div class="mchips">` + state.members.map(m=>
+    `<button type="button" class="mchip${sel.has(m.id)?" on":""}" data-action="toggle-attendee" data-id="${esc(m.id)}">${esc(m.display_name||"Member")}</button>`
+  ).join("") + `</div>`;
+}
+function whoCameLine(visitId, venueName){
+  const names = attendeesForVisit(visitId);
+  const list = names.length
+    ? `<span>Who came:</span> <span class="names">${names.map(esc).join(", ")}</span>`
+    : `<span>No attendance logged.</span>`;
+  return `<div class="who-came">${list} <button class="linkbtn" data-action="edit-attendance" data-visit="${esc(visitId)}" data-venue="${esc(venueName)}">edit</button></div>`;
 }
 
 function renderLog(){
@@ -561,6 +596,10 @@ function renderLog(){
         <div class="field">
           <label for="l-date">Date of visit</label>
           <input id="l-date" type="date" value="${todayISO()}" max="${todayISO()}">
+        </div>
+        <div class="field">
+          <label>Who was there?</label>
+          <div id="log-attendees">${memberChips([state.me?.id])}</div>
         </div>
         <div class="fab-space"></div>
         <button class="btn" type="submit" id="log-go">Log the visit, then rate it</button>
@@ -617,6 +656,22 @@ function slider(key,label,val){
 
 function closeDialog(){ scrim.classList.remove("show"); dialog.innerHTML=""; }
 
+function openAttendance(visitId, venueName){
+  dialog.innerHTML = `
+    <div class="grab"></div>
+    <h2>Who was there?</h2>
+    <div class="sub">${esc(venueName||"")}</div>
+    <div id="att-msg" class="msg error"></div>
+    <form data-action="attendance-submit" data-visit="${esc(visitId)}">
+      <div id="att-chips">${memberChips(attendeeIdsForVisit(visitId))}</div>
+      <div class="fab-space"></div>
+      <button class="btn" type="submit" id="att-go">Save who was there</button>
+      <div class="fab-space"></div>
+      <button class="btn ghost" type="button" data-action="close-dialog">Cancel</button>
+    </form>`;
+  scrim.classList.add("show");
+}
+
 /* ---------- messages ---------- */
 function showMsg(id, text, kind="error"){
   const el = $("#"+id); if(!el) return;
@@ -665,6 +720,12 @@ document.addEventListener("click", async (e)=>{
     const venue = state.venues.find(v=>v.id===venueId);
     openRating(visit.id, venue?.name, currentRating(visit.id));
   }
+
+  if(action==="toggle-attendee"){ t.classList.toggle("on"); }
+
+  if(action==="edit-attendance"){
+    openAttendance(t.dataset.visit, t.dataset.venue);
+  }
 });
 
 document.addEventListener("change", (e)=>{
@@ -680,6 +741,7 @@ document.addEventListener("submit", async (e)=>{
   if(action==="auth-submit") return handleAuth();
   if(action==="log-submit") return handleLog();
   if(action==="rating-submit") return handleRating(t.dataset.visit);
+  if(action==="attendance-submit") return handleAttendance(t.dataset.visit);
 });
 
 function currentRating(visitId){
@@ -740,6 +802,15 @@ async function handleLog(){
       .insert({ venue_id: venueId, visited_on: date }).select().single();
     if(vErr) throw new Error(vErr.message);
 
+    // Attendance: who was ticked. Errors are ignored so a missing table never blocks logging.
+    const attendeeIds = [...document.querySelectorAll('#log-attendees .mchip.on')].map(b=>b.dataset.id);
+    if(attendeeIds.length){
+      await sb.from("attendances").upsert(
+        attendeeIds.map(id=>({ visit_id: visit.id, member_id: id })),
+        { onConflict: "visit_id,member_id", ignoreDuplicates: true }
+      );
+    }
+
     await loadAll();
     state.tab = "ranking";
     renderApp();
@@ -747,6 +818,33 @@ async function handleLog(){
   }catch(err){
     showMsg("log-msg", err.message, "error");
     const g=$("#log-go"); if(g) g.disabled=false;
+  }
+}
+
+async function handleAttendance(visitId){
+  clearMsg("att-msg");
+  const go = $("#att-go"); if(go) go.disabled = true;
+  try{
+    const selected = new Set([...document.querySelectorAll('#att-chips .mchip.on')].map(b=>b.dataset.id));
+    const before = new Set(attendeeIdsForVisit(visitId));
+    const toAdd = [...selected].filter(id=>!before.has(id));
+    const toRemove = [...before].filter(id=>!selected.has(id));
+    if(toAdd.length){
+      const { error } = await sb.from("attendances")
+        .insert(toAdd.map(id=>({ visit_id: visitId, member_id: id })));
+      if(error) throw new Error(error.message);
+    }
+    if(toRemove.length){
+      const { error } = await sb.from("attendances")
+        .delete().eq("visit_id", visitId).in("member_id", toRemove);
+      if(error) throw new Error(error.message);
+    }
+    await loadAll();
+    closeDialog();
+    renderApp();
+  }catch(err){
+    showMsg("att-msg", err.message);
+    const g=$("#att-go"); if(g) g.disabled=false;
   }
 }
 
