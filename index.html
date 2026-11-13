@@ -171,8 +171,8 @@
   /* map */
   #map{height:62vh;min-height:320px;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:var(--panel-2)}
   #loc-map{height:280px;border-radius:12px;border:1px solid var(--line);overflow:hidden;margin-top:4px}
-  .chilli-pin{background:none;border:none}
-  .chilli-pin .pin{width:34px;height:34px;filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.45))}
+  .venue-pin{background:none;border:none}
+  .venue-pin svg{display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
   .placerow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14px}
   .placerow:last-child{border-bottom:none}
   .mp b{font-family:var(--font-display);font-size:15px;color:#2A1A2E}
@@ -519,9 +519,9 @@ let homeMap=null, locMap=null, locMarker=null;
 
 function placedVenues(){ return state.venues.filter(v=> typeof v.lat==="number" && typeof v.lng==="number"); }
 
-function chilliIcon(score){
-  const col = score==null ? "#8E2B20" : score>=7.5 ? "#4C9E2C" : score>=5 ? "#D99A2B" : "#C0472E";
-  return L.divIcon({ className:"chilli-pin", html:`<div class="pin" style="color:${col}">${CHILLI_SVG}</div>`, iconSize:[34,34], iconAnchor:[17,30], popupAnchor:[0,-28] });
+function venuePinIcon(){
+  const svg = `<svg viewBox="0 0 24 24" width="32" height="40" aria-hidden="true"><path d="M12 1.5c-4.7 0-8.5 3.8-8.5 8.5 0 6.4 8.5 12.5 8.5 12.5s8.5-6.1 8.5-12.5c0-4.7-3.8-8.5-8.5-8.5z" fill="#D7261E" stroke="#ffffff" stroke-width="1.6"/><circle cx="12" cy="10" r="3.1" fill="#ffffff"/></svg>`;
+  return L.divIcon({ className:"venue-pin", html:svg, iconSize:[32,40], iconAnchor:[16,38], popupAnchor:[0,-34] });
 }
 
 function renderMap(){
@@ -547,7 +547,7 @@ function initHomeMap(placed, overallById){
   const markers=[];
   placed.forEach(v=>{
     const ov = overallById[v.id];
-    const m = L.marker([v.lat,v.lng], { icon: chilliIcon(ov) }).addTo(homeMap);
+    const m = L.marker([v.lat,v.lng], { icon: venuePinIcon() }).addTo(homeMap);
     m.bindPopup(`<div class="mp"><b>${esc(v.name)}</b>${v.area?`<div class="mp-area">${esc(v.area)}</div>`:``}<div class="mp-score">${ov==null?"Not rated yet":esc(ov)+" / 10"}</div><div class="mp-btns"><button class="linkbtn" data-action="open-venue" data-id="${esc(v.id)}">Open</button><button class="linkbtn" data-action="venue-location" data-id="${esc(v.id)}">Move pin</button></div></div>`);
     markers.push(m);
   });
