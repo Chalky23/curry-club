@@ -3,24 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#26172B">
+<meta name="theme-color" content="#F3E9D8">
 <title>Curry Club</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..900&family=Figtree:wght@400..700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#26172B;
-    --panel:#36213D;
-    --panel-2:#432A4B;
-    --line:#5A3F63;
-    --text:#F6EEE3;
-    --muted:#BFAEC4;
-    --turmeric:#F0B429;
-    --chilli:#F08A80;
-    --coriander:#9CCB78;
+    --bg:#F3E9D8;
+    --panel:#FCF7EF;
+    --panel-2:#EBDCC4;
+    --line:#D9C6A6;
+    --text:#2A1A2E;
+    --muted:#8A7859;
+    --turmeric:#D99A2B;
+    --chilli:#C0472E;
+    --coriander:#4C9E2C;
+    --burgundy:#8E2B20;
+    --link:#A85A14;
 
-    --font-display:'Bricolage Grotesque',system-ui,sans-serif;
+    --font-display:'Fraunces',Georgia,'Times New Roman',serif;
     --font-body:'Figtree',system-ui,sans-serif;
     --radius:16px;
     --radius-sm:11px;
@@ -38,7 +41,7 @@
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.15}
-  a{color:var(--turmeric)}
+  a{color:var(--link)}
 
   .wrap{max-width:var(--maxw);margin:0 auto;padding:18px 16px 96px}
 
@@ -48,7 +51,7 @@
     padding:4px 2px 14px;
   }
   .brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-0.01em}
-  .brand .dot{width:14px;height:14px;border-radius:50%;background:var(--turmeric);box-shadow:0 0 0 4px rgba(240,180,41,.18)}
+  .brand-logo{width:27px;height:27px;flex:none}
   .topbar .spacer{flex:1}
   .who{font-size:13px;color:var(--muted);text-align:right;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -56,7 +59,7 @@
   button{font-family:inherit;cursor:pointer;border:none}
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    background:var(--turmeric);color:#2a1c06;font-weight:700;font-size:15px;
+    background:var(--text);color:var(--bg);font-weight:700;font-size:15px;
     padding:13px 18px;border-radius:var(--radius-sm);width:100%;
   }
   .btn:active{transform:translateY(1px)}
@@ -65,7 +68,7 @@
   .btn.small{width:auto;padding:9px 14px;font-size:14px}
   .btn[disabled]{opacity:.55;cursor:default}
 
-  .linkbtn{background:none;color:var(--turmeric);font:inherit;font-weight:600;text-decoration:underline;padding:0}
+  .linkbtn{background:none;color:var(--burgundy);font:inherit;font-weight:600;text-decoration:underline;padding:0}
 
   /* ---------- cards & forms ---------- */
   .card{
@@ -88,8 +91,8 @@
   /* ---------- messages ---------- */
   .msg{border-radius:var(--radius-sm);padding:11px 13px;font-size:14px;margin-bottom:12px;display:none}
   .msg.show{display:block}
-  .msg.error{background:rgba(240,138,128,.14);border:1px solid var(--chilli);color:#ffd9d4}
-  .msg.ok{background:rgba(156,203,120,.14);border:1px solid var(--coriander);color:#e4f4d4}
+  .msg.error{background:#F7E3DD;border:1px solid var(--chilli);color:#7A2317}
+  .msg.ok{background:#E7F2DB;border:1px solid var(--coriander);color:#2E5C15}
 
   /* ---------- ranking card ---------- */
   .venue{display:flex;gap:14px;align-items:center}
@@ -127,7 +130,7 @@
   .rater{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:7px}
   .rater-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .rater-name{font-weight:600;font-size:14px}
-  .rater-overall{font-family:var(--font-display);font-weight:800;color:var(--turmeric);font-size:14px}
+  .rater-overall{font-family:var(--font-display);font-weight:900;color:var(--burgundy);font-size:15px}
   .rater-scores{display:flex;gap:6px;flex-wrap:wrap}
   .chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:11.5px;color:var(--muted)}
   .rater-notes{margin-top:7px;font-size:13px;color:var(--text);opacity:.92}
@@ -139,7 +142,7 @@
   .slider{margin-bottom:16px}
   .slider .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .slider .top .name{font-weight:600;font-size:14px}
-  .slider .top .n{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--turmeric)}
+  .slider .top .n{font-family:var(--font-display);font-weight:900;font-size:18px;color:var(--burgundy)}
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
   input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line)}
   input[type=range]::-moz-range-track{height:8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line)}
@@ -161,13 +164,13 @@
   /* ---------- bottom nav ---------- */
   .nav{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
-    background:rgba(38,23,43,.92);backdrop-filter:blur(10px);
+    background:rgba(252,247,239,.92);backdrop-filter:blur(10px);
     border-top:1px solid var(--line);
     display:flex;max-width:var(--maxw);margin:0 auto;
     padding-bottom:env(safe-area-inset-bottom);
   }
   .nav button{flex:1;background:none;color:var(--muted);font-size:11.5px;font-weight:600;padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px}
-  .nav button.active{color:var(--turmeric)}
+  .nav button.active{color:var(--burgundy)}
   .nav button svg{width:22px;height:22px}
 
   .fab-space{height:4px}
@@ -178,7 +181,7 @@
 
   /* auth screen */
   .auth-hero{text-align:center;padding:30px 10px 18px}
-  .auth-hero .dot{width:46px;height:46px;border-radius:50%;background:var(--turmeric);margin:0 auto 14px;box-shadow:0 0 0 10px rgba(240,180,41,.14)}
+  .hero-logo{width:78px;height:78px;display:block;margin:0 auto 12px}
   .auth-hero h1{font-size:30px;font-weight:800;letter-spacing:-0.02em}
   .auth-hero p{color:var(--muted);margin-top:6px}
   .tabs{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:4px;margin-bottom:16px}
@@ -187,6 +190,20 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="crest" viewBox="0 0 80 80">
+  <circle cx="40" cy="40" r="36" fill="none" stroke="#2A1A2E" stroke-width="2.4"/>
+  <circle cx="40" cy="40" r="29.5" fill="none" stroke="#D99A2B" stroke-width="1.3"/>
+  <g transform="translate(-3,3)">
+    <path d="M22 52 C 27 55 35 54 42 50 C 48 46 53 41 56 35 C 58 32 58 27 55 25 C 52 27 50 30 46 34 C 41 39 34 45 29 49 C 26 51 24 52 22 52 Z" fill="#4C9E2C"/>
+    <path d="M22 52 C 27 55 35 54 42 50 C 48 46 53 41 56 35 C 55 39 49 44 41 49 C 34 53 27 54 22 52 Z" fill="#2C7A18"/>
+    <path d="M51 33 C 47 37 44 40 41 43 C 37 46 33 48 29 50" fill="none" stroke="#CDE89C" stroke-width="3" stroke-linecap="round"/>
+    <path d="M50 34 C 46 38 43 41 40 44 C 37 46 34 48 31 49" fill="none" stroke="#ECF7D6" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M48 30 C 50 24 55 23 58 27 C 55 30 51 31 48 30 Z" fill="#5C8E2C"/>
+    <path d="M53 27 C 55 23 57 21 57 18" fill="none" stroke="#8BAD4E" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+</symbol>
+</defs></svg>
 <div id="app" class="wrap"></div>
 <div id="scrim" class="scrim" data-action="scrim-bg"><div id="dialog" class="dialog"></div></div>
 
@@ -339,7 +356,7 @@ function renderAuth(){
   const join = state.authMode === "join";
   app.innerHTML = `
     <div class="auth-hero">
-      <div class="dot"></div>
+      <svg class="hero-logo" aria-hidden="true"><use href="#crest"/></svg>
       <h1>Curry Club</h1>
       <p>Rate the curry. Settle the rankings.</p>
     </div>
@@ -415,7 +432,7 @@ function renderApp(){
   };
   app.innerHTML = `
     <div class="topbar">
-      <div class="brand"><span class="dot"></span>Curry Club</div>
+      <div class="brand"><svg class="brand-logo" aria-hidden="true"><use href="#crest"/></svg>Curry Club</div>
       <div class="spacer"></div>
       <div class="who">Hi, ${esc(name)}</div>
       <button class="btn ghost small" data-action="logout">Log out</button>
