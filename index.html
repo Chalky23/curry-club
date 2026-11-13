@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#26172B">
+<title>Curry Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#26172B;
+    --panel:#36213D;
+    --panel-2:#432A4B;
+    --line:#5A3F63;
+    --text:#F6EEE3;
+    --muted:#BFAEC4;
+    --turmeric:#F0B429;
+    --chilli:#F08A80;
+    --coriander:#9CCB78;
+
+    --font-display:'Bricolage Grotesque',system-ui,sans-serif;
+    --font-body:'Figtree',system-ui,sans-serif;
+    --radius:16px;
+    --radius-sm:11px;
+    --maxw:560px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font-body);
+    background:var(--bg);
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.15}
+  a{color:var(--turmeric)}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:18px 16px 96px}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:4px 2px 14px;
+  }
+  .brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:19px;letter-spacing:-0.01em}
+  .brand .dot{width:14px;height:14px;border-radius:50%;background:var(--turmeric);box-shadow:0 0 0 4px rgba(240,180,41,.18)}
+  .topbar .spacer{flex:1}
+  .who{font-size:13px;color:var(--muted);text-align:right;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ---------- buttons ---------- */
+  button{font-family:inherit;cursor:pointer;border:none}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--turmeric);color:#2a1c06;font-weight:700;font-size:15px;
+    padding:13px 18px;border-radius:var(--radius-sm);width:100%;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn.small{width:auto;padding:9px 14px;font-size:14px}
+  .btn[disabled]{opacity:.55;cursor:default}
+
+  .linkbtn{background:none;color:var(--turmeric);font:inherit;font-weight:600;text-decoration:underline;padding:0}
+
+  /* ---------- cards & forms ---------- */
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px;
+  }
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  input[type=text],input[type=email],input[type=password],input[type=date],textarea,select{
+    width:100%;font-family:inherit;font-size:16px;color:var(--text);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:12px 13px;
+  }
+  textarea{resize:vertical;min-height:72px}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--turmeric);outline-offset:1px}
+
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .sectiontitle{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:4px 2px 10px}
+
+  /* ---------- messages ---------- */
+  .msg{border-radius:var(--radius-sm);padding:11px 13px;font-size:14px;margin-bottom:12px;display:none}
+  .msg.show{display:block}
+  .msg.error{background:rgba(240,138,128,.14);border:1px solid var(--chilli);color:#ffd9d4}
+  .msg.ok{background:rgba(156,203,120,.14);border:1px solid var(--coriander);color:#e4f4d4}
+
+  /* ---------- ranking card ---------- */
+  .venue{display:flex;gap:14px;align-items:center}
+  .venue .body{flex:1;min-width:0}
+  .venue h3{font-size:17px;margin-bottom:2px}
+  .venue .area{font-size:13px;color:var(--muted)}
+  .venue .meta{font-size:12.5px;color:var(--muted);margin-top:7px}
+  .rank-no{font-family:var(--font-display);font-weight:800;color:var(--muted);font-size:14px;width:22px;text-align:center;flex:none}
+
+  /* score ring */
+  .ring{position:relative;width:62px;height:62px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+  .ring .val b{font-family:var(--font-display);font-weight:800;font-size:19px;line-height:1}
+  .ring .val span{font-size:9px;color:var(--muted);letter-spacing:.04em}
+
+  /* meters */
+  .meters{margin-top:12px;display:grid;gap:8px}
+  .meter{display:grid;grid-template-columns:62px 1fr 30px;align-items:center;gap:9px}
+  .meter .lbl{font-size:12.5px;color:var(--muted)}
+  .meter .track{height:7px;background:var(--panel-2);border-radius:99px;overflow:hidden}
+  .meter .fill{height:100%;border-radius:99px}
+  .meter .num{font-size:12.5px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+
+  .expand{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .visit-row{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .visit-row:last-child{border-bottom:none}
+  .visit-row .d{color:var(--muted)}
+  .pill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:12px;color:var(--muted)}
+
+  .empty{text-align:center;color:var(--muted);padding:34px 10px}
+  .empty .big{font-size:34px;margin-bottom:8px}
+
+  /* ---------- sliders ---------- */
+  .slider{margin-bottom:16px}
+  .slider .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .slider .top .name{font-weight:600;font-size:14px}
+  .slider .top .n{font-family:var(--font-display);font-weight:800;font-size:17px;color:var(--turmeric)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent}
+  input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line)}
+  input[type=range]::-moz-range-track{height:8px;border-radius:99px;background:var(--panel-2);border:1px solid var(--line)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;margin-top:-8px;width:24px;height:24px;border-radius:50%;background:var(--turmeric);border:3px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border:3px solid var(--bg);border-radius:50%;background:var(--turmeric)}
+
+  /* ---------- dialog ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(10,5,12,.62);display:none;align-items:flex-end;justify-content:center;z-index:40;padding:0}
+  .scrim.show{display:flex}
+  .dialog{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:var(--maxw);max-height:92vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  @media(min-width:600px){
+    .scrim{align-items:center;padding:20px}
+    .dialog{border-radius:20px}
+  }
+  .dialog .grab{width:40px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 14px}
+  .dialog h2{font-size:19px;margin-bottom:3px}
+  .dialog .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+
+  /* ---------- bottom nav ---------- */
+  .nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:rgba(38,23,43,.92);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    display:flex;max-width:var(--maxw);margin:0 auto;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav button{flex:1;background:none;color:var(--muted);font-size:11.5px;font-weight:600;padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .nav button.active{color:var(--turmeric)}
+  .nav button svg{width:22px;height:22px}
+
+  .fab-space{height:4px}
+  .center{display:flex;align-items:center;justify-content:center;min-height:62vh}
+  .spinner{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--turmeric);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hidden{display:none !important}
+
+  /* auth screen */
+  .auth-hero{text-align:center;padding:30px 10px 18px}
+  .auth-hero .dot{width:46px;height:46px;border-radius:50%;background:var(--turmeric);margin:0 auto 14px;box-shadow:0 0 0 10px rgba(240,180,41,.14)}
+  .auth-hero h1{font-size:30px;font-weight:800;letter-spacing:-0.02em}
+  .auth-hero p{color:var(--muted);margin-top:6px}
+  .tabs{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:4px;margin-bottom:16px}
+  .tabs button{flex:1;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:9px;border-radius:99px}
+  .tabs button.active{background:var(--turmeric);color:#2a1c06}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div id="scrim" class="scrim" data-action="scrim-bg"><div id="dialog" class="dialog"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script>
+/* ==========================================================================
+   Curry Club. Single static file, vanilla JS, talks to Supabase directly.
+   Backend is pre-built: profiles, venues, visits, ratings, club_settings.
+   Row Level Security is on. Everyone reads; you write only your own rows.
+   ========================================================================== */
+
+const SUPABASE_URL = "https://vmklxqyibmuguwzafhvg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_-lgK6Iji95NLHogpmT9ubA_fcmdlz4L"; // publishable key, safe in browser
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------- tiny helpers ---------- */
+const $ = (sel, root=document) => root.querySelector(sel);
+const app = $("#app");
+const scrim = $("#scrim");
+const dialog = $("#dialog");
+
+// Escape every piece of user content before it goes into HTML.
+function esc(s){
+  return String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const round1 = n => n==null ? null : Math.round(n*10)/10;
+function fmtDate(d){
+  if(!d) return "";
+  const dt = new Date(d + "T00:00:00");
+  return dt.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- app state ---------- */
+const state = {
+  session: null,
+  me: null,            // profile row for the signed-in user
+  tab: "ranking",      // ranking | log
+  authMode: "login",   // login | join
+  loading: true,
+  venues: [],
+  visits: [],
+  ratings: [],
+  profiles: {},        // id -> display_name
+  expanded: null,      // venue id expanded in the ranking
+};
+
+/* ==========================================================================
+   DATA
+   ========================================================================== */
+async function loadAll(){
+  const [venues, visits, ratings, profiles] = await Promise.all([
+    sb.from("venues").select("*").order("created_at",{ascending:false}),
+    sb.from("visits").select("*").order("visited_on",{ascending:false}),
+    sb.from("ratings").select("*"),
+    sb.from("profiles").select("id,display_name"),
+  ]);
+  state.venues   = venues.data   || [];
+  state.visits   = visits.data   || [];
+  state.ratings  = ratings.data  || [];
+  state.profiles = {};
+  (profiles.data || []).forEach(p => state.profiles[p.id] = p.display_name);
+}
+
+// Build the ranking: per venue, average across every rating on its visits.
+function ranking(){
+  const visitsByVenue = {};
+  state.visits.forEach(v => (visitsByVenue[v.venue_id] ||= []).push(v));
+  const ratingsByVisit = {};
+  state.ratings.forEach(r => (ratingsByVisit[r.visit_id] ||= []).push(r));
+
+  const rows = state.venues.map(venue => {
+    const vVisits = visitsByVenue[venue.id] || [];
+    let food=[], service=[], value=[], ratingCount=0;
+    vVisits.forEach(vis => {
+      (ratingsByVisit[vis.id] || []).forEach(r => {
+        food.push(r.food); service.push(r.service); value.push(r.value); ratingCount++;
+      });
+    });
+    const f=avg(food), s=avg(service), val=avg(value);
+    const overall = (f!=null||s!=null||val!=null)
+      ? avg([f,s,val].filter(x=>x!=null)) : null;
+    return {
+      venue, visitCount:vVisits.length, ratingCount,
+      food:f, service:s, value:val, overall,
+      lastVisit: vVisits[0]?.visited_on || null,
+      visits: vVisits,
+    };
+  });
+
+  // Rated venues first, by overall descending; then unrated, by newest.
+  rows.sort((a,b)=>{
+    if(a.overall==null && b.overall==null) return 0;
+    if(a.overall==null) return 1;
+    if(b.overall==null) return -1;
+    return b.overall - a.overall;
+  });
+  return rows;
+}
+
+/* ==========================================================================
+   AUTH
+   ========================================================================== */
+async function doLogin(email, password){
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){
+    if(/invalid login/i.test(error.message)) throw new Error("Email or password is wrong. Try again.");
+    throw new Error(error.message);
+  }
+}
+
+async function doJoin(email, password, displayName, clubCode){
+  const { error } = await sb.auth.signUp({
+    email, password,
+    options:{ data:{ display_name: displayName, club_code: clubCode } }
+  });
+  if(error){
+    // The sign-up trigger raises on a bad club code, which Supabase returns
+    // as a "Database error saving new user".
+    if(/database error|unexpected_failure|club code/i.test(error.message)){
+      throw new Error("That club code is wrong. Check it with whoever runs the club.");
+    }
+    if(/already registered|already been registered/i.test(error.message)){
+      throw new Error("That email is already signed up. Try logging in instead.");
+    }
+    throw new Error(error.message);
+  }
+}
+
+async function loadMe(){
+  const uid = state.session?.user?.id;
+  if(!uid){ state.me = null; return; }
+  const { data } = await sb.from("profiles").select("*").eq("id",uid).maybeSingle();
+  state.me = data || { id:uid, display_name: state.session.user.email };
+}
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function render(){
+  if(state.loading){ app.innerHTML = `<div class="center"><div class="spinner"></div></div>`; return; }
+  if(!state.session){ renderAuth(); return; }
+  renderApp();
+}
+
+function renderAuth(){
+  const join = state.authMode === "join";
+  app.innerHTML = `
+    <div class="auth-hero">
+      <div class="dot"></div>
+      <h1>Curry Club</h1>
+      <p>Rate the curry. Settle the rankings.</p>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button data-action="auth-tab" data-mode="login" class="${join?"":"active"}">Log in</button>
+        <button data-action="auth-tab" data-mode="join" class="${join?"active":""}">Join</button>
+      </div>
+      <div id="auth-msg" class="msg error"></div>
+      <form data-action="auth-submit">
+        ${join ? `
+        <div class="field">
+          <label for="f-name">Your name</label>
+          <input id="f-name" type="text" autocomplete="name" placeholder="How you show up in the club" required>
+        </div>` : ``}
+        <div class="field">
+          <label for="f-email">Email</label>
+          <input id="f-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        </div>
+        <div class="field">
+          <label for="f-pass">Password</label>
+          <input id="f-pass" type="password" autocomplete="${join?"new-password":"current-password"}" placeholder="${join?"At least 6 characters":"Your password"}" required>
+        </div>
+        ${join ? `
+        <div class="field">
+          <label for="f-code">Club code</label>
+          <input id="f-code" type="text" autocomplete="off" placeholder="The code from your club" required>
+          <div class="hint">You need the club code to join. Ask whoever runs the club.</div>
+        </div>` : ``}
+        <div class="fab-space"></div>
+        <button class="btn" type="submit" id="auth-go">${join?"Join the club":"Log in"}</button>
+      </form>
+    </div>`;
+}
+
+function ringSVG(score){
+  const pct = score==null ? 0 : Math.max(0,Math.min(1, score/10));
+  const r=26, c=2*Math.PI*r, off=c*(1-pct);
+  const col = score==null ? "var(--line)"
+            : score>=7.5 ? "var(--coriander)"
+            : score>=5   ? "var(--turmeric)" : "var(--chilli)";
+  return `
+    <div class="ring">
+      <svg width="62" height="62" viewBox="0 0 62 62">
+        <circle cx="31" cy="31" r="${r}" fill="none" stroke="var(--panel-2)" stroke-width="6"></circle>
+        <circle cx="31" cy="31" r="${r}" fill="none" stroke="${col}" stroke-width="6"
+          stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"></circle>
+      </svg>
+      <div class="val">
+        <b>${score==null?"–":round1(score)}</b><span>/10</span>
+      </div>
+    </div>`;
+}
+
+function meter(label, val){
+  const pct = val==null ? 0 : Math.max(0,Math.min(100, val*10));
+  const col = val==null ? "var(--line)"
+            : val>=7.5 ? "var(--coriander)"
+            : val>=5   ? "var(--turmeric)" : "var(--chilli)";
+  return `
+    <div class="meter">
+      <div class="lbl">${label}</div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${col}"></div></div>
+      <div class="num">${val==null?"–":round1(val)}</div>
+    </div>`;
+}
+
+function renderApp(){
+  const name = state.me?.display_name || "there";
+  const navIcon = {
+    ranking:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/></svg>',
+    log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>',
+  };
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span>Curry Club</div>
+      <div class="spacer"></div>
+      <div class="who">Hi, ${esc(name)}</div>
+      <button class="btn ghost small" data-action="logout">Log out</button>
+    </div>
+    <div id="view"></div>
+    <nav class="nav">
+      <button data-action="tab" data-tab="ranking" class="${state.tab==="ranking"?"active":""}">${navIcon.ranking}Ranking</button>
+      <button data-action="tab" data-tab="log" class="${state.tab==="log"?"active":""}">${navIcon.log}Log a visit</button>
+    </nav>`;
+  if(state.tab === "ranking") renderRanking();
+  else renderLog();
+}
+
+function renderRanking(){
+  const rows = ranking();
+  const view = $("#view");
+  if(!rows.length){
+    view.innerHTML = `<div class="empty"><div class="big">🍛</div>
+      <p>No venues yet. Log your first visit to get the ranking started.</p>
+      <div class="fab-space"></div>
+      <button class="btn small" data-action="tab" data-tab="log">Log a visit</button></div>`;
+    return;
+  }
+  view.innerHTML = `
+    <div class="sectiontitle">The ranking</div>
+    ${rows.map((r,i)=>venueCard(r,i)).join("")}`;
+}
+
+function venueCard(r,i){
+  const open = state.expanded === r.venue.id;
+  const rankLabel = r.overall==null ? "–" : (i+1);
+  return `
+  <div class="card">
+    <div class="venue" data-action="toggle-venue" data-id="${esc(r.venue.id)}">
+      <div class="rank-no">${rankLabel}</div>
+      ${ringSVG(r.overall)}
+      <div class="body">
+        <h3>${esc(r.venue.name)}</h3>
+        <div class="area">${esc(r.venue.area || "")}</div>
+        <div class="meta">${r.visitCount} visit${r.visitCount===1?"":"s"} · ${r.ratingCount} rating${r.ratingCount===1?"":"s"}${r.lastVisit?` · last ${esc(fmtDate(r.lastVisit))}`:""}</div>
+      </div>
+    </div>
+    <div class="meters">
+      ${meter("Food", r.food)}
+      ${meter("Service", r.service)}
+      ${meter("Value", r.value)}
+    </div>
+    ${open ? `
+    <div class="expand">
+      ${r.visits.length ? r.visits.map(v=>`
+        <div class="visit-row">
+          <span>${esc(fmtDate(v.visited_on))}</span>
+          <span class="d">${myRatingFor(v.id)!=null?`you gave ${myRatingFor(v.id)}/10`:`<button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">rate this</button>`}</span>
+        </div>`).join("") : `<div class="hint">No visits logged yet.</div>`}
+      <div class="fab-space"></div>
+      <button class="btn secondary small" data-action="rate-latest" data-venue-id="${esc(r.venue.id)}">Rate your latest visit here</button>
+    </div>` : ``}
+  </div>`;
+}
+
+function myRatingFor(visitId){
+  const uid = state.session?.user?.id;
+  const r = state.ratings.find(x=>x.visit_id===visitId && x.user_id===uid);
+  if(!r) return null;
+  return round1(avg([r.food,r.service,r.value]));
+}
+
+function renderLog(){
+  const view = $("#view");
+  const venueOptions = state.venues
+    .slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .map(v=>`<option value="${esc(v.id)}">${esc(v.name)}${v.area?` · ${esc(v.area)}`:""}</option>`).join("");
+  view.innerHTML = `
+    <div class="sectiontitle">Log a visit</div>
+    <div class="card">
+      <div id="log-msg" class="msg"></div>
+      <form data-action="log-submit">
+        <div class="field">
+          <label for="l-venue">Venue</label>
+          <select id="l-venue" data-action="venue-change">
+            <option value="">Add a new venue…</option>
+            ${venueOptions}
+          </select>
+        </div>
+        <div id="new-venue">
+          <div class="field">
+            <label for="l-name">Venue name</label>
+            <input id="l-name" type="text" placeholder="e.g. Spice Lounge" >
+          </div>
+          <div class="field">
+            <label for="l-area">Area <span style="font-weight:400">(optional)</span></label>
+            <input id="l-area" type="text" placeholder="e.g. town centre">
+          </div>
+        </div>
+        <div class="field">
+          <label for="l-date">Date of visit</label>
+          <input id="l-date" type="date" value="${todayISO()}" max="${todayISO()}">
+        </div>
+        <div class="fab-space"></div>
+        <button class="btn" type="submit" id="log-go">Log the visit, then rate it</button>
+        <div class="hint" style="text-align:center;margin-top:10px">You will add your food, service and value scores next.</div>
+      </form>
+    </div>`;
+  toggleNewVenue();
+}
+
+function toggleNewVenue(){
+  const sel = $("#l-venue"); const box = $("#new-venue");
+  if(!sel || !box) return;
+  box.classList.toggle("hidden", !!sel.value);
+}
+
+/* ---------- rating dialog ---------- */
+function openRating(visitId, venueName, existing){
+  const r = existing || { food:7, service:7, value:7, notes:"" };
+  dialog.innerHTML = `
+    <div class="grab"></div>
+    <h2>${existing?"Update your rating":"Rate the visit"}</h2>
+    <div class="sub">${esc(venueName||"")}</div>
+    <div id="rate-msg" class="msg error"></div>
+    <form data-action="rating-submit" data-visit="${esc(visitId)}">
+      ${slider("food","Food",r.food)}
+      ${slider("service","Service",r.service)}
+      ${slider("value","Value for money",r.value)}
+      <div class="field">
+        <label for="r-notes">Notes <span style="font-weight:400">(optional)</span></label>
+        <textarea id="r-notes" placeholder="The lamb was unreal. Slow on drinks.">${esc(r.notes||"")}</textarea>
+      </div>
+      <div class="fab-space"></div>
+      <button class="btn" type="submit" id="rate-go">${existing?"Save changes":"Save rating"}</button>
+      <div class="fab-space"></div>
+      <button class="btn ghost" type="button" data-action="close-dialog">Cancel</button>
+    </form>`;
+  scrim.classList.add("show");
+  // live number updates
+  dialog.querySelectorAll('input[type=range]').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const t = $(`#num-${e.target.dataset.key}`);
+      if(t) t.textContent = e.target.value;
+    });
+  });
+}
+
+function slider(key,label,val){
+  return `
+  <div class="slider">
+    <div class="top"><span class="name">${label}</span><span class="n" id="num-${key}">${val}</span></div>
+    <input type="range" min="1" max="10" step="1" value="${val}" data-key="${key}">
+  </div>`;
+}
+
+function closeDialog(){ scrim.classList.remove("show"); dialog.innerHTML=""; }
+
+/* ---------- messages ---------- */
+function showMsg(id, text, kind="error"){
+  const el = $("#"+id); if(!el) return;
+  el.textContent = text;
+  el.className = `msg ${kind} show`;
+}
+function clearMsg(id){ const el=$("#"+id); if(el){ el.className="msg"; el.textContent=""; } }
+
+/* ==========================================================================
+   ACTIONS (event delegation via data-action)
+   ========================================================================== */
+document.addEventListener("click", async (e)=>{
+  const t = e.target.closest("[data-action]");
+  if(!t) return;
+  const action = t.dataset.action;
+
+  if(action==="auth-tab"){ state.authMode = t.dataset.mode; renderAuth(); }
+
+  if(action==="scrim-bg" && e.target===scrim) closeDialog();
+  if(action==="close-dialog") closeDialog();
+
+  if(action==="tab"){ state.tab = t.dataset.tab; state.expanded=null; renderApp(); }
+
+  if(action==="logout"){
+    await sb.auth.signOut();
+  }
+
+  if(action==="toggle-venue"){
+    const id = t.dataset.id;
+    state.expanded = state.expanded===id ? null : id;
+    renderRanking();
+  }
+
+  if(action==="rate"){
+    const visitId = t.dataset.visit;
+    const existing = currentRating(visitId);
+    openRating(visitId, t.dataset.venue, existing);
+  }
+
+  if(action==="rate-latest"){
+    const venueId = t.dataset.venueId;
+    const vs = state.visits.filter(v=>v.venue_id===venueId)
+      .sort((a,b)=> (b.visited_on||"").localeCompare(a.visited_on||""));
+    if(!vs.length) return;
+    const visit = vs[0];
+    const venue = state.venues.find(v=>v.id===venueId);
+    openRating(visit.id, venue?.name, currentRating(visit.id));
+  }
+});
+
+document.addEventListener("change", (e)=>{
+  if(e.target.id==="l-venue") toggleNewVenue();
+});
+
+document.addEventListener("submit", async (e)=>{
+  const t = e.target.closest("[data-action]");
+  if(!t) return;
+  e.preventDefault();
+  const action = t.dataset.action;
+
+  if(action==="auth-submit") return handleAuth();
+  if(action==="log-submit") return handleLog();
+  if(action==="rating-submit") return handleRating(t.dataset.visit);
+});
+
+function currentRating(visitId){
+  const uid = state.session?.user?.id;
+  return state.ratings.find(x=>x.visit_id===visitId && x.user_id===uid) || null;
+}
+
+async function handleAuth(){
+  clearMsg("auth-msg");
+  const go = $("#auth-go"); go.disabled = true;
+  const join = state.authMode==="join";
+  const email = $("#f-email").value.trim();
+  const pass = $("#f-pass").value;
+  try{
+    if(join){
+      const name = $("#f-name").value.trim();
+      const code = $("#f-code").value.trim();
+      if(!name) throw new Error("Add your name so the club knows who you are.");
+      if(pass.length < 6) throw new Error("Password needs at least 6 characters.");
+      await doJoin(email, pass, name, code);
+      // Email confirmation is off, so a session should exist now.
+      await afterAuthChange();
+      if(!state.session){
+        state.authMode="login"; renderAuth();
+        showMsg("auth-msg","Account made. Log in with your email and password.","ok");
+      }
+    } else {
+      await doLogin(email, pass);
+    }
+  }catch(err){
+    showMsg("auth-msg", err.message);
+    const g=$("#auth-go"); if(g) g.disabled=false;
+  }
+}
+
+async function handleLog(){
+  clearMsg("log-msg");
+  const go = $("#log-go"); go.disabled = true;
+  try{
+    const sel = $("#l-venue");
+    const date = $("#l-date").value || todayISO();
+    let venueId = sel.value;
+    let venueName = "";
+
+    if(!venueId){
+      const name = $("#l-name").value.trim();
+      const area = $("#l-area").value.trim();
+      if(!name) throw new Error("Give the venue a name.");
+      const { data, error } = await sb.from("venues")
+        .insert({ name, area: area || null }).select().single();
+      if(error) throw new Error(error.message);
+      venueId = data.id; venueName = data.name;
+    } else {
+      venueName = state.venues.find(v=>v.id===venueId)?.name || "";
+    }
+
+    const { data: visit, error: vErr } = await sb.from("visits")
+      .insert({ venue_id: venueId, visited_on: date }).select().single();
+    if(vErr) throw new Error(vErr.message);
+
+    await loadAll();
+    state.tab = "ranking";
+    renderApp();
+    openRating(visit.id, venueName, null);
+  }catch(err){
+    showMsg("log-msg", err.message, "error");
+    const g=$("#log-go"); if(g) g.disabled=false;
+  }
+}
+
+async function handleRating(visitId){
+  clearMsg("rate-msg");
+  const go = $("#rate-go"); go.disabled = true;
+  try{
+    const get = k => parseInt(dialog.querySelector(`input[data-key="${k}"]`).value,10);
+    const payload = {
+      visit_id: visitId,
+      food: get("food"), service: get("service"), value: get("value"),
+      notes: ($("#r-notes").value || "").trim() || null,
+    };
+    const { error } = await sb.from("ratings")
+      .upsert(payload, { onConflict: "visit_id,user_id" });
+    if(error) throw new Error(error.message);
+    await loadAll();
+    closeDialog();
+    state.tab = "ranking";
+    renderApp();
+  }catch(err){
+    showMsg("rate-msg", err.message, "error");
+    const g=$("#rate-go"); if(g) g.disabled=false;
+  }
+}
+
+/* ==========================================================================
+   BOOT
+   ========================================================================== */
+async function afterAuthChange(){
+  const { data } = await sb.auth.getSession();
+  state.session = data.session;
+  if(state.session){
+    await loadMe();
+    await loadAll();
+  }
+}
+
+async function boot(){
+  await afterAuthChange();
+  state.loading = false;
+  render();
+}
+
+sb.auth.onAuthStateChange((_event, session)=>{
+  const was = !!state.session;
+  state.session = session;
+  if(session && !was){
+    state.loading = true; render();
+    (async()=>{ await loadMe(); await loadAll(); state.loading=false; state.tab="ranking"; render(); })();
+  } else if(!session){
+    state.me=null; state.venues=[]; state.visits=[]; state.ratings=[]; render();
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
