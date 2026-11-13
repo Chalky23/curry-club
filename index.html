@@ -163,6 +163,10 @@
   .wgb-badge{display:inline-block;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 9px;margin-top:2px}
   .wgb-badge.yes{background:#E7F2DB;color:#2E5C15}
   .wgb-badge.no{background:#F7E3DD;color:#7A2317}
+  .chev{color:var(--muted);flex:none;display:flex;align-items:center;transition:transform .15s ease}
+  .chev.open{transform:rotate(90deg)}
+  .vh-actions{display:flex;gap:14px}
+  .linkbtn.danger{color:var(--chilli)}
 
   .empty{text-align:center;color:var(--muted);padding:34px 10px}
   .empty .big{font-size:34px;margin-bottom:8px}
@@ -511,6 +515,7 @@ function renderRanking(){
 function venueCard(r,i){
   const open = state.expanded === r.venue.id;
   const rankLabel = r.overall==null ? "–" : (i+1);
+  const scored = SCORE_FIELDS.filter(f=>r.cat[f.key]!=null);
   return `
   <div class="card">
     <div class="venue" data-action="toggle-venue" data-id="${esc(r.venue.id)}">
@@ -521,17 +526,15 @@ function venueCard(r,i){
         <div class="area">${esc(r.venue.area || "")}</div>
         <div class="meta">${r.visitCount} visit${r.visitCount===1?"":"s"} · ${r.ratingCount} rating${r.ratingCount===1?"":"s"}${r.lastVisit?` · last ${esc(fmtDate(r.lastVisit))}`:""}</div>
       </div>
-    </div>
-    <div class="meters">
-      ${CARD_FIELDS.map(k=>meter(SCORE_FIELDS.find(f=>f.key===k).label, r.cat[k])).join("")}
+      <div class="chev${open?" open":""}" aria-hidden="true">${CHEVRON_SVG}</div>
     </div>
     ${open ? `
     <div class="expand">
-      ${SCORE_FIELDS.some(f=>r.cat[f.key]!=null) ? `
-      <div class="sectiontitle" style="margin:2px 2px 8px">Full breakdown</div>
+      ${scored.length ? `
+      <div class="sectiontitle" style="margin:2px 2px 8px">Scores</div>
       <div class="meters" style="margin-top:0">
-        ${SCORE_FIELDS.filter(f=>r.cat[f.key]!=null).map(f=>meter(f.label, r.cat[f.key])).join("")}
-      </div>` : ``}
+        ${scored.map(f=>meter(f.label, r.cat[f.key])).join("")}
+      </div>` : `<div class="hint">No scores yet. Rate a visit to start the board.</div>`}
       ${r.visits.length ? r.visits.map(v=>{
         const rs = ratingsForVisit(v.id);
         const mine = rs.find(x=>x.isMe);
@@ -539,7 +542,10 @@ function venueCard(r,i){
         <div class="visit-block">
           <div class="visit-head">
             <span>${esc(fmtDate(v.visited_on))}</span>
-            <button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">${mine?"edit your rating":"rate this visit"}</button>
+            <span class="vh-actions">
+              <button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">${mine?"edit your rating":"rate this visit"}</button>
+              <button class="linkbtn danger" data-action="delete-visit" data-visit="${esc(v.id)}">delete</button>
+            </span>
           </div>
           ${rs.length ? rs.map(raterBlock).join("") : `<div class="hint">No ratings yet. Be the first.</div>`}
           ${whoCameLine(v.id, r.venue.name)}
@@ -712,6 +718,7 @@ function openRating(visitId, venueName, existing){
 }
 
 const CHILLI_SVG = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M6 20 C10 21 15 18 19 12 C21 9 21 6 20 5 C19 7 18 9 14 13 C10 17 8 18 6 20 Z" fill="currentColor"/><path d="M19 5 C20 3 21 3 22 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+const CHEVRON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
 
 function heatChillies(n){
   if(!n) return "";
@@ -815,6 +822,15 @@ document.addEventListener("click", async (e)=>{
     const id = t.dataset.id;
     state.expanded = state.expanded===id ? null : id;
     renderRanking();
+  }
+
+  if(action==="delete-visit"){
+    if(!confirm("Delete this visit, along with its ratings and attendance? This cannot be undone.")) return;
+    const { error } = await sb.from("visits").delete().eq("id", t.dataset.visit);
+    if(error){ alert(error.message); return; }
+    await loadAll();
+    if(state.visits.some(v=>v.id===t.dataset.visit)) alert("Only whoever logged this visit can delete it.");
+    renderApp();
   }
 
   if(action==="rate"){
