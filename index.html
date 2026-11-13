@@ -120,6 +120,18 @@
   .visit-row .d{color:var(--muted)}
   .pill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:12px;color:var(--muted)}
 
+  /* everyone's ratings on a visit */
+  .visit-block{margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .visit-block:first-child{border-top:none;margin-top:4px;padding-top:0}
+  .visit-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);margin-bottom:9px}
+  .rater{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:7px}
+  .rater-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .rater-name{font-weight:600;font-size:14px}
+  .rater-overall{font-family:var(--font-display);font-weight:800;color:var(--turmeric);font-size:14px}
+  .rater-scores{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:11.5px;color:var(--muted)}
+  .rater-notes{margin-top:7px;font-size:13px;color:var(--text);opacity:.92}
+
   .empty{text-align:center;color:var(--muted);padding:34px 10px}
   .empty .big{font-size:34px;margin-bottom:8px}
 
@@ -453,13 +465,30 @@ function venueCard(r,i){
     </div>
     ${open ? `
     <div class="expand">
-      ${r.visits.length ? r.visits.map(v=>`
-        <div class="visit-row">
-          <span>${esc(fmtDate(v.visited_on))}</span>
-          <span class="d">${myRatingFor(v.id)!=null?`you gave ${myRatingFor(v.id)}/10`:`<button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">rate this</button>`}</span>
-        </div>`).join("") : `<div class="hint">No visits logged yet.</div>`}
-      <div class="fab-space"></div>
-      <button class="btn secondary small" data-action="rate-latest" data-venue-id="${esc(r.venue.id)}">Rate your latest visit here</button>
+      ${r.visits.length ? r.visits.map(v=>{
+        const rs = ratingsForVisit(v.id);
+        const mine = rs.find(x=>x.isMe);
+        return `
+        <div class="visit-block">
+          <div class="visit-head">
+            <span>${esc(fmtDate(v.visited_on))}</span>
+            <button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">${mine?"edit your rating":"rate this visit"}</button>
+          </div>
+          ${rs.length ? rs.map(x=>`
+            <div class="rater">
+              <div class="rater-top">
+                <span class="rater-name">${esc(x.name)}${x.isMe?" (you)":""}</span>
+                <span class="rater-overall">${x.overall}/10</span>
+              </div>
+              <div class="rater-scores">
+                <span class="chip">Food ${x.food}</span>
+                <span class="chip">Service ${x.service}</span>
+                <span class="chip">Value ${x.value}</span>
+              </div>
+              ${x.notes?`<div class="rater-notes">${esc(x.notes)}</div>`:``}
+            </div>`).join("") : `<div class="hint">No ratings yet. Be the first.</div>`}
+        </div>`;
+      }).join("") : `<div class="hint">No visits logged yet.</div>`}
     </div>` : ``}
   </div>`;
 }
@@ -469,6 +498,20 @@ function myRatingFor(visitId){
   const r = state.ratings.find(x=>x.visit_id===visitId && x.user_id===uid);
   if(!r) return null;
   return round1(avg([r.food,r.service,r.value]));
+}
+
+// Everyone's ratings for a visit, with display names, newest-best first.
+function ratingsForVisit(visitId){
+  const uid = state.session?.user?.id;
+  return state.ratings
+    .filter(r=>r.visit_id===visitId)
+    .map(r=>({
+      ...r,
+      name: state.profiles[r.user_id] || "Someone",
+      isMe: r.user_id===uid,
+      overall: round1(avg([r.food,r.service,r.value])),
+    }))
+    .sort((a,b)=>(b.overall||0)-(a.overall||0));
 }
 
 function renderLog(){
