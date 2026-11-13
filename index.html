@@ -168,6 +168,19 @@
   .vh-actions{display:flex;gap:14px}
   .linkbtn.danger{color:var(--chilli)}
 
+  /* map */
+  #map{height:62vh;min-height:320px;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:var(--panel-2)}
+  #loc-map{height:280px;border-radius:12px;border:1px solid var(--line);overflow:hidden;margin-top:4px}
+  .chilli-pin{background:none;border:none}
+  .chilli-pin .pin{width:34px;height:34px;filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.45))}
+  .placerow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .placerow:last-child{border-bottom:none}
+  .mp b{font-family:var(--font-display);font-size:15px;color:#2A1A2E}
+  .mp-area{color:#6b5a3a;font-size:12px}
+  .mp-score{margin-top:4px;font-weight:600;color:var(--burgundy)}
+  .mp-btns{margin-top:9px;display:flex;gap:14px}
+  .leaflet-popup-content{margin:12px 14px}
+
   .empty{text-align:center;color:var(--muted);padding:34px 10px}
   .empty .big{font-size:34px;margin-bottom:8px}
 
@@ -240,6 +253,8 @@
 <div id="app" class="wrap"></div>
 <div id="scrim" class="scrim" data-action="scrim-bg"><div id="dialog" class="dialog"></div></div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script>
 /* ==========================================================================
@@ -277,7 +292,7 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 const state = {
   session: null,
   me: null,            // profile row for the signed-in user
-  tab: "ranking",      // ranking | log
+  tab: "map",          // map | ranking | log
   authMode: "login",   // login | join
   loading: true,
   venues: [],
@@ -478,6 +493,7 @@ function meter(label, val){
 function renderApp(){
   const name = state.me?.display_name || "there";
   const navIcon = {
+    map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z" stroke-linejoin="round"/><circle cx="12" cy="11" r="2.2"/></svg>',
     ranking:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/></svg>',
     log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>',
   };
@@ -490,11 +506,88 @@ function renderApp(){
     </div>
     <div id="view"></div>
     <nav class="nav">
+      <button data-action="tab" data-tab="map" class="${state.tab==="map"?"active":""}">${navIcon.map}Map</button>
       <button data-action="tab" data-tab="ranking" class="${state.tab==="ranking"?"active":""}">${navIcon.ranking}Ranking</button>
       <button data-action="tab" data-tab="log" class="${state.tab==="log"?"active":""}">${navIcon.log}Log a visit</button>
     </nav>`;
-  if(state.tab === "ranking") renderRanking();
+  if(state.tab === "map") renderMap();
+  else if(state.tab === "ranking") renderRanking();
   else renderLog();
+}
+
+let homeMap=null, locMap=null, locMarker=null;
+
+function placedVenues(){ return state.venues.filter(v=> typeof v.lat==="number" && typeof v.lng==="number"); }
+
+function chilliIcon(score){
+  const col = score==null ? "#8E2B20" : score>=7.5 ? "#4C9E2C" : score>=5 ? "#D99A2B" : "#C0472E";
+  return L.divIcon({ className:"chilli-pin", html:`<div class="pin" style="color:${col}">${CHILLI_SVG}</div>`, iconSize:[34,34], iconAnchor:[17,30], popupAnchor:[0,-28] });
+}
+
+function renderMap(){
+  const view = $("#view");
+  const overallById = {}; ranking().forEach(r=>overallById[r.venue.id]=r.overall);
+  const placed = placedVenues();
+  const unplaced = state.venues.filter(v=> !(typeof v.lat==="number" && typeof v.lng==="number"));
+  view.innerHTML = `
+    <div class="sectiontitle">The map</div>
+    <div id="map"></div>
+    ${placed.length ? `` : `<div class="hint" style="margin-top:12px">No venues on the map yet.${unplaced.length?" Set a location below to drop your first chilli.":" Log a visit first, then come back to place it."}</div>`}
+    ${unplaced.length ? `
+      <div class="sectiontitle" style="margin-top:18px">Add a location</div>
+      ${unplaced.map(v=>`<div class="placerow"><span>${esc(v.name)}${v.area?` · ${esc(v.area)}`:""}</span><button class="btn secondary small" data-action="venue-location" data-id="${esc(v.id)}">Set location</button></div>`).join("")}` : ``}`;
+  initHomeMap(placed, overallById);
+}
+
+function initHomeMap(placed, overallById){
+  if(homeMap){ try{homeMap.remove();}catch(e){} homeMap=null; }
+  const el = $("#map"); if(!el || typeof L==="undefined") return;
+  homeMap = L.map(el, { scrollWheelZoom:false }).setView([51.30,-1.95], 9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(homeMap);
+  const markers=[];
+  placed.forEach(v=>{
+    const ov = overallById[v.id];
+    const m = L.marker([v.lat,v.lng], { icon: chilliIcon(ov) }).addTo(homeMap);
+    m.bindPopup(`<div class="mp"><b>${esc(v.name)}</b>${v.area?`<div class="mp-area">${esc(v.area)}</div>`:``}<div class="mp-score">${ov==null?"Not rated yet":esc(ov)+" / 10"}</div><div class="mp-btns"><button class="linkbtn" data-action="open-venue" data-id="${esc(v.id)}">Open</button><button class="linkbtn" data-action="venue-location" data-id="${esc(v.id)}">Move pin</button></div></div>`);
+    markers.push(m);
+  });
+  if(markers.length){ try{ homeMap.fitBounds(L.featureGroup(markers).getBounds().pad(0.3), { maxZoom:14 }); }catch(e){} }
+  setTimeout(()=>{ try{ homeMap && homeMap.invalidateSize(); }catch(e){} }, 60);
+}
+
+function openVenueLocation(venueId){
+  const v = state.venues.find(x=>x.id===venueId); if(!v) return;
+  dialog.innerHTML = `
+    <div class="grab"></div>
+    <h2>Set the location</h2>
+    <div class="sub">${esc(v.name)}</div>
+    <div id="loc-msg" class="msg error"></div>
+    <div class="field">
+      <label for="loc-q">Postcode or town</label>
+      <div style="display:flex;gap:8px">
+        <input id="loc-q" type="text" placeholder="e.g. SN13 0HB or Corsham" value="${esc(v.area||"")}">
+        <button type="button" class="btn secondary small" data-action="geocode" style="white-space:nowrap">Find</button>
+      </div>
+      <div class="hint">Find it, then drag the pin to fine-tune.</div>
+    </div>
+    <div id="loc-map"></div>
+    <div class="fab-space"></div>
+    <button class="btn" type="button" data-action="save-location" data-id="${esc(venueId)}" id="loc-go">Save location</button>
+    <div class="fab-space"></div>
+    <button class="btn ghost" type="button" data-action="close-dialog">Cancel</button>`;
+  scrim.classList.add("show");
+  initLocMap(v);
+}
+
+function initLocMap(v){
+  if(locMap){ try{locMap.remove();}catch(e){} locMap=null; }
+  const el = $("#loc-map"); if(!el || typeof L==="undefined") return;
+  const placed = (typeof v.lat==="number" && typeof v.lng==="number");
+  const start = placed ? [v.lat,v.lng] : [51.30,-1.95];
+  locMap = L.map(el).setView(start, placed?15:9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(locMap);
+  locMarker = L.marker(start, { draggable:true }).addTo(locMap);
+  setTimeout(()=>{ try{ locMap && locMap.invalidateSize(); }catch(e){} }, 80);
 }
 
 function renderRanking(){
@@ -773,7 +866,7 @@ function slider(key,label,val){
   </div>`;
 }
 
-function closeDialog(){ scrim.classList.remove("show"); dialog.innerHTML=""; }
+function closeDialog(){ if(locMap){ try{locMap.remove();}catch(e){} locMap=null; } scrim.classList.remove("show"); dialog.innerHTML=""; }
 
 function openAttendance(visitId, venueName){
   dialog.innerHTML = `
@@ -853,6 +946,38 @@ document.addEventListener("click", async (e)=>{
 
   if(action==="edit-attendance"){
     openAttendance(t.dataset.visit, t.dataset.venue);
+  }
+
+  if(action==="open-venue"){
+    state.tab = "ranking"; state.expanded = t.dataset.id; renderApp();
+  }
+
+  if(action==="venue-location"){
+    openVenueLocation(t.dataset.id);
+  }
+
+  if(action==="geocode"){
+    const q = ($("#loc-q").value || "").trim(); if(!q) return;
+    clearMsg("loc-msg");
+    try{
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`, { headers:{ "Accept":"application/json" } });
+      const data = await res.json();
+      if(!data || !data.length){ showMsg("loc-msg","Could not find that. Try a postcode or a nearby town.","error"); return; }
+      const lat=+data[0].lat, lng=+data[0].lon;
+      if(locMap){ locMap.setView([lat,lng],15); locMarker.setLatLng([lat,lng]); }
+    }catch(e){ showMsg("loc-msg","Lookup failed. Drag the pin by hand instead.","error"); }
+  }
+
+  if(action==="save-location"){
+    if(!locMarker) return;
+    const ll = locMarker.getLatLng();
+    const { error } = await sb.from("venues").update({ lat: ll.lat, lng: ll.lng }).eq("id", t.dataset.id);
+    if(error){ showMsg("loc-msg", error.message, "error"); return; }
+    closeDialog();
+    await loadAll();
+    const v = state.venues.find(x=>x.id===t.dataset.id);
+    if(!(v && typeof v.lat==="number")) alert("Only whoever added this venue can set its location.");
+    renderApp();
   }
 
   if(action==="set-heat"){
