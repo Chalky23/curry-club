@@ -142,6 +142,28 @@
   .who-came{margin-top:10px;font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}
   .who-came .names{color:var(--text)}
 
+  /* richer ratings */
+  .ratesec{font-family:var(--font-display);font-weight:700;font-size:15px;margin:18px 0 10px;color:var(--text)}
+  .ratesec:first-of-type{margin-top:4px}
+  .opt{border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:16px;background:var(--panel-2)}
+  .opt-toggle{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .opt-toggle input{width:18px;height:18px;accent-color:var(--burgundy)}
+  .opt-body{margin-top:12px}
+  .opt-body[hidden]{display:none}
+  .heatpick{display:flex;gap:6px}
+  .chillidot{background:none;border:none;padding:2px;width:32px;height:32px;color:var(--line);cursor:pointer;line-height:0}
+  .chillidot.on{color:var(--coriander)}
+  .chillis{display:inline-flex;gap:1px;margin-left:6px;vertical-align:-3px}
+  .chillis .chillidot{width:16px;height:16px;padding:0;color:var(--coriander);cursor:default}
+  .wgb{display:flex;gap:8px}
+  .wgb-btn{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:var(--radius-sm);padding:11px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+  .wgb-btn.on{background:var(--burgundy);color:#F3E9D8;border-color:var(--burgundy)}
+  .rater-dish{font-size:13px;margin-bottom:5px}
+  .rater-dish b{font-weight:600}
+  .wgb-badge{display:inline-block;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 9px;margin-top:2px}
+  .wgb-badge.yes{background:#E7F2DB;color:#2E5C15}
+  .wgb-badge.no{background:#F7E3DD;color:#7A2317}
+
   .empty{text-align:center;color:var(--muted);padding:34px 10px}
   .empty .big{font-size:34px;margin-bottom:8px}
 
@@ -284,6 +306,22 @@ async function loadAll(){
 }
 
 // Build the ranking: per venue, average across every rating on its visits.
+const SCORE_FIELDS = [
+  {key:"main",        label:"Main"},
+  {key:"poppadoms",   label:"Poppadoms"},
+  {key:"starter",     label:"Starter"},
+  {key:"breads_rice", label:"Breads & rice"},
+  {key:"dessert",     label:"Dessert"},
+  {key:"service",     label:"Service"},
+  {key:"value",       label:"Value"},
+  {key:"ambience",    label:"Ambience"},
+  {key:"portion",     label:"Portion"},
+];
+const CARD_FIELDS = ["main","service","value","ambience"];
+
+function ratingScores(r){ return SCORE_FIELDS.map(f=>r[f.key]).filter(v=>typeof v==="number"); }
+function ratingOverall(r){ const s=ratingScores(r); return s.length ? round1(avg(s)) : null; }
+
 function ranking(){
   const visitsByVenue = {};
   state.visits.forEach(v => (visitsByVenue[v.venue_id] ||= []).push(v));
@@ -292,18 +330,15 @@ function ranking(){
 
   const rows = state.venues.map(venue => {
     const vVisits = visitsByVenue[venue.id] || [];
-    let food=[], service=[], value=[], ratingCount=0;
-    vVisits.forEach(vis => {
-      (ratingsByVisit[vis.id] || []).forEach(r => {
-        food.push(r.food); service.push(r.service); value.push(r.value); ratingCount++;
-      });
-    });
-    const f=avg(food), s=avg(service), val=avg(value);
-    const overall = (f!=null||s!=null||val!=null)
-      ? avg([f,s,val].filter(x=>x!=null)) : null;
+    const rs = [];
+    vVisits.forEach(vis => (ratingsByVisit[vis.id] || []).forEach(r => rs.push(r)));
+    const cat = {};
+    SCORE_FIELDS.forEach(f => { cat[f.key] = avg(rs.map(r=>r[f.key]).filter(v=>typeof v==="number")); });
+    const overalls = rs.map(ratingOverall).filter(v=>v!=null);
+    const overall = overalls.length ? avg(overalls) : null;
     return {
-      venue, visitCount:vVisits.length, ratingCount,
-      food:f, service:s, value:val, overall,
+      venue, visitCount:vVisits.length, ratingCount:rs.length,
+      cat, overall,
       lastVisit: vVisits[0]?.visited_on || null,
       visits: vVisits,
     };
@@ -488,12 +523,15 @@ function venueCard(r,i){
       </div>
     </div>
     <div class="meters">
-      ${meter("Food", r.food)}
-      ${meter("Service", r.service)}
-      ${meter("Value", r.value)}
+      ${CARD_FIELDS.map(k=>meter(SCORE_FIELDS.find(f=>f.key===k).label, r.cat[k])).join("")}
     </div>
     ${open ? `
     <div class="expand">
+      ${SCORE_FIELDS.some(f=>r.cat[f.key]!=null) ? `
+      <div class="sectiontitle" style="margin:2px 2px 8px">Full breakdown</div>
+      <div class="meters" style="margin-top:0">
+        ${SCORE_FIELDS.filter(f=>r.cat[f.key]!=null).map(f=>meter(f.label, r.cat[f.key])).join("")}
+      </div>` : ``}
       ${r.visits.length ? r.visits.map(v=>{
         const rs = ratingsForVisit(v.id);
         const mine = rs.find(x=>x.isMe);
@@ -503,24 +541,32 @@ function venueCard(r,i){
             <span>${esc(fmtDate(v.visited_on))}</span>
             <button class="linkbtn" data-action="rate" data-visit="${esc(v.id)}" data-venue="${esc(r.venue.name)}">${mine?"edit your rating":"rate this visit"}</button>
           </div>
-          ${rs.length ? rs.map(x=>`
-            <div class="rater">
-              <div class="rater-top">
-                <span class="rater-name">${esc(x.name)}${x.isMe?" (you)":""}</span>
-                <span class="rater-overall">${x.overall}/10</span>
-              </div>
-              <div class="rater-scores">
-                <span class="chip">Food ${x.food}</span>
-                <span class="chip">Service ${x.service}</span>
-                <span class="chip">Value ${x.value}</span>
-              </div>
-              ${x.notes?`<div class="rater-notes">${esc(x.notes)}</div>`:``}
-            </div>`).join("") : `<div class="hint">No ratings yet. Be the first.</div>`}
+          ${rs.length ? rs.map(raterBlock).join("") : `<div class="hint">No ratings yet. Be the first.</div>`}
           ${whoCameLine(v.id, r.venue.name)}
         </div>`;
       }).join("") : `<div class="hint">No visits logged yet.</div>`}
     </div>` : ``}
   </div>`;
+}
+
+function raterBlock(x){
+  const chip = (label,v)=> (typeof v==="number") ? `<span class="chip">${label} ${v}</span>` : "";
+  const dishLine = (label,dish,heat)=> dish ? `<div class="rater-dish">${label}: <b>${esc(dish)}</b>${heatChillies(heat)}</div>` : "";
+  const wgb = x.would_go_back===true ? `<span class="wgb-badge yes">Would go back</span>`
+            : x.would_go_back===false ? `<span class="wgb-badge no">Would not return</span>` : "";
+  return `
+    <div class="rater">
+      <div class="rater-top">
+        <span class="rater-name">${esc(x.name)}${x.isMe?" (you)":""}</span>
+        <span class="rater-overall">${x.overall==null?"–":x.overall}/10</span>
+      </div>
+      ${dishLine("Main", x.main_dish, x.main_heat)}
+      ${dishLine("Starter", x.starter_dish, x.starter_heat)}
+      ${x.dessert_dish?`<div class="rater-dish">Dessert: <b>${esc(x.dessert_dish)}</b></div>`:``}
+      <div class="rater-scores">${SCORE_FIELDS.map(f=>chip(f.label, x[f.key])).join("")}</div>
+      ${wgb}
+      ${x.notes?`<div class="rater-notes">${esc(x.notes)}</div>`:``}
+    </div>`;
 }
 
 function myRatingFor(visitId){
@@ -539,7 +585,7 @@ function ratingsForVisit(visitId){
       ...r,
       name: state.profiles[r.user_id] || "Someone",
       isMe: r.user_id===uid,
-      overall: round1(avg([r.food,r.service,r.value])),
+      overall: ratingOverall(r),
     }))
     .sort((a,b)=>(b.overall||0)-(a.overall||0));
 }
@@ -617,27 +663,93 @@ function toggleNewVenue(){
 
 /* ---------- rating dialog ---------- */
 function openRating(visitId, venueName, existing){
-  const r = existing || { food:7, service:7, value:7, notes:"" };
+  const r = existing || {};
+  const S = k => (typeof r[k]==="number" ? r[k] : 6);
+  const hasStarter = typeof r.starter==="number" || !!r.starter_dish;
+  const hasBreads  = typeof r.breads_rice==="number";
+  const hasDessert = typeof r.dessert==="number" || !!r.dessert_dish;
   dialog.innerHTML = `
     <div class="grab"></div>
     <h2>${existing?"Update your rating":"Rate the visit"}</h2>
     <div class="sub">${esc(venueName||"")}</div>
     <div id="rate-msg" class="msg error"></div>
     <form data-action="rating-submit" data-visit="${esc(visitId)}">
-      ${slider("food","Food",r.food)}
-      ${slider("service","Service",r.service)}
-      ${slider("value","Value for money",r.value)}
+
+      <div class="ratesec">The meal</div>
+      ${slider("poppadoms","Poppadoms",S("poppadoms"))}
+      ${optCourse("starter","Starter",hasStarter,r)}
+
+      <div class="field">
+        <label for="dish-main">Main: what you had <span style="font-weight:400">(optional)</span></label>
+        <input id="dish-main" type="text" placeholder="e.g. Lamb rogan josh" value="${esc(r.main_dish||"")}">
+      </div>
+      <div class="field"><label>Main: heat</label>${heatPicker("main", r.main_heat)}</div>
+      ${slider("main","Main",S("main"))}
+
+      ${optCourse("breads_rice","Breads & rice",hasBreads,r)}
+      ${optCourse("dessert","Dessert",hasDessert,r)}
+
+      <div class="ratesec">The experience</div>
+      ${slider("service","Service",S("service"))}
+      ${slider("value","Value for money",S("value"))}
+      ${slider("ambience","Ambience",S("ambience"))}
+      ${slider("portion","Portion size",S("portion"))}
+
+      <div class="field"><label>Would you go back?</label>${wgbPicker(r.would_go_back)}</div>
+
       <div class="field">
         <label for="r-notes">Notes <span style="font-weight:400">(optional)</span></label>
         <textarea id="r-notes" placeholder="The lamb was unreal. Slow on drinks.">${esc(r.notes||"")}</textarea>
       </div>
+
       <div class="fab-space"></div>
       <button class="btn" type="submit" id="rate-go">${existing?"Save changes":"Save rating"}</button>
       <div class="fab-space"></div>
       <button class="btn ghost" type="button" data-action="close-dialog">Cancel</button>
     </form>`;
   scrim.classList.add("show");
-  // live number updates
+  wireSliders();
+}
+
+const CHILLI_SVG = `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M6 20 C10 21 15 18 19 12 C21 9 21 6 20 5 C19 7 18 9 14 13 C10 17 8 18 6 20 Z" fill="currentColor"/><path d="M19 5 C20 3 21 3 22 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+function heatChillies(n){
+  if(!n) return "";
+  let s = `<span class="chillis">`;
+  for(let i=0;i<n;i++) s += `<span class="chillidot on">${CHILLI_SVG}</span>`;
+  return s + `</span>`;
+}
+
+function heatPicker(key, value){
+  const v = value || 0;
+  return `<div class="heatpick" data-key="${key}" data-value="${v}">` +
+    [1,2,3,4,5].map(n=>`<button type="button" class="chillidot${v>=n?" on":""}" data-action="set-heat" data-key="${key}" data-level="${n}" aria-label="${n} ${n===1?"chilli":"chillies"}">${CHILLI_SVG}</button>`).join("") +
+    `</div>`;
+}
+
+function wgbPicker(value){
+  const yes = value===true, no = value===false;
+  return `<div class="wgb" data-value="${yes?"yes":no?"no":""}">
+    <button type="button" class="wgb-btn${yes?" on":""}" data-action="set-wgb" data-val="yes">Yes</button>
+    <button type="button" class="wgb-btn${no?" on":""}" data-action="set-wgb" data-val="no">No</button>
+  </div>`;
+}
+
+function optCourse(key,label,active,r){
+  const hasDish = key==="starter" || key==="dessert";
+  const hasHeat = key==="starter";
+  const toggleLabel = key==="breads_rice" ? "Had breads and rice" : `Had a ${label.toLowerCase()}`;
+  const body = `
+    ${hasDish?`<div class="field"><label for="dish-${key}">${label}: what you had <span style="font-weight:400">(optional)</span></label><input id="dish-${key}" type="text" placeholder="Optional" value="${esc(r[key+"_dish"]||"")}"></div>`:``}
+    ${hasHeat?`<div class="field"><label>${label}: heat</label>${heatPicker(key, r[key+"_heat"])}</div>`:``}
+    ${slider(key, label+" score", typeof r[key]==="number"?r[key]:6)}`;
+  return `<div class="opt">
+    <label class="opt-toggle"><input type="checkbox" data-action="toggle-course" data-course="${key}" ${active?"checked":""}> ${toggleLabel}</label>
+    <div class="opt-body" data-course-body="${key}" ${active?"":"hidden"}>${body}</div>
+  </div>`;
+}
+
+function wireSliders(){
   dialog.querySelectorAll('input[type=range]').forEach(inp=>{
     inp.addEventListener('input', e=>{
       const t = $(`#num-${e.target.dataset.key}`);
@@ -726,10 +838,28 @@ document.addEventListener("click", async (e)=>{
   if(action==="edit-attendance"){
     openAttendance(t.dataset.visit, t.dataset.venue);
   }
+
+  if(action==="set-heat"){
+    const wrap = t.closest(".heatpick"); if(!wrap) return;
+    const lvl = +t.dataset.level, cur = +wrap.dataset.value;
+    const next = cur===lvl ? 0 : lvl;
+    wrap.dataset.value = next;
+    wrap.querySelectorAll(".chillidot").forEach((c,i)=>c.classList.toggle("on", i<next));
+  }
+
+  if(action==="set-wgb"){
+    const wrap = t.closest(".wgb"); if(!wrap) return;
+    wrap.dataset.value = t.dataset.val;
+    wrap.querySelectorAll(".wgb-btn").forEach(b=>b.classList.toggle("on", b.dataset.val===t.dataset.val));
+  }
 });
 
 document.addEventListener("change", (e)=>{
   if(e.target.id==="l-venue") toggleNewVenue();
+  if(e.target.dataset && e.target.dataset.action==="toggle-course"){
+    const body = dialog.querySelector(`.opt-body[data-course-body="${e.target.dataset.course}"]`);
+    if(body) body.hidden = !e.target.checked;
+  }
 });
 
 document.addEventListener("submit", async (e)=>{
@@ -850,12 +980,26 @@ async function handleAttendance(visitId){
 
 async function handleRating(visitId){
   clearMsg("rate-msg");
-  const go = $("#rate-go"); go.disabled = true;
+  const go = $("#rate-go"); if(go) go.disabled = true;
   try{
-    const get = k => parseInt(dialog.querySelector(`input[data-key="${k}"]`).value,10);
+    const slV = k => { const el = dialog.querySelector(`input[type=range][data-key="${k}"]`); return el ? parseInt(el.value,10) : null; };
+    const heatV = k => { const w = dialog.querySelector(`.heatpick[data-key="${k}"]`); const v = w ? +w.dataset.value : 0; return v || null; };
+    const dishV = id => { const el = $("#"+id); const t = el ? el.value.trim() : ""; return t || null; };
+    const courseOn = k => { const el = dialog.querySelector(`input[data-course="${k}"]`); return !!(el && el.checked); };
+    const wgbEl = dialog.querySelector(".wgb"); const wgb = wgbEl ? wgbEl.dataset.value : "";
     const payload = {
       visit_id: visitId,
-      food: get("food"), service: get("service"), value: get("value"),
+      poppadoms: slV("poppadoms"),
+      main: slV("main"), main_dish: dishV("dish-main"), main_heat: heatV("main"),
+      starter:      courseOn("starter")     ? slV("starter")        : null,
+      starter_dish: courseOn("starter")     ? dishV("dish-starter") : null,
+      starter_heat: courseOn("starter")     ? heatV("starter")      : null,
+      breads_rice:  courseOn("breads_rice") ? slV("breads_rice")    : null,
+      dessert:      courseOn("dessert")     ? slV("dessert")        : null,
+      dessert_dish: courseOn("dessert")     ? dishV("dish-dessert") : null,
+      service: slV("service"), value: slV("value"),
+      ambience: slV("ambience"), portion: slV("portion"),
+      would_go_back: wgb==="yes" ? true : wgb==="no" ? false : null,
       notes: ($("#r-notes").value || "").trim() || null,
     };
     const { error } = await sb.from("ratings")
