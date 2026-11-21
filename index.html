@@ -397,6 +397,7 @@ async function doLogin(email, password){
   const { error } = await sb.auth.signInWithPassword({ email, password });
   if(error){
     if(/invalid login/i.test(error.message)) throw new Error("Email or password is wrong. Try again.");
+    if(/email not confirmed|not confirmed/i.test(error.message)) throw new Error("Please confirm your email first. Check your inbox for the link we sent.");
     throw new Error(error.message);
   }
 }
@@ -1161,7 +1162,7 @@ async function handleAuth(){
       await afterAuthChange();
       if(!state.session){
         state.authMode="login"; renderAuth();
-        showMsg("auth-msg","Account made. Log in with your email and password.","ok");
+        showMsg("auth-msg","Account created. Check your email for a confirmation link, then come back and log in.","ok");
       }
     } else {
       await doLogin(email, pass);
