@@ -740,6 +740,8 @@ function renderStats(){
   state.attendances.forEach(a=>(attByUser[a.member_id] ||= []).push(a.visit_id));
   const visitsDesc = state.visits.slice().sort((a,b)=>(b.visited_on||"").localeCompare(a.visited_on||""));
 
+  const stddev = arr => { const m=avg(arr); return Math.sqrt(avg(arr.map(x=>(x-m)**2))); };
+
   const rows = members.map(m=>{
     const rs = ratingsByUser[m.id] || [];
     const attSet = new Set(attByUser[m.id] || []);
@@ -747,12 +749,17 @@ function renderStats(){
     for(const v of visitsDesc){ if(attSet.has(v.id)) streak++; else break; }
     const allScores = rs.flatMap(ratingScores);
     const heats = rs.flatMap(r=>[r.main_heat, r.starter_heat].filter(x=>typeof x==="number"));
+    const overalls = rs.map(ratingOverall).filter(v=>v!=null);
+    const wgb = rs.map(r=>r.would_go_back).filter(x=>x===true||x===false);
     return {
       name: m.display_name || "Member",
       attended: attSet.size,
       streak,
       avgScore: allScores.length ? round1(avg(allScores)) : null,
       avgHeat: heats.length ? Math.round(avg(heats)*10)/10 : null,
+      wgbCount: wgb.length,
+      wgbRate: wgb.length ? wgb.filter(x=>x===true).length/wgb.length : null,
+      spread: overalls.length>=2 ? round1(stddev(overalls)) : null,
     };
   });
 
@@ -761,6 +768,31 @@ function renderStats(){
   const scorers = rows.filter(r=>r.avgScore!=null).sort((a,b)=> a.avgScore-b.avgScore);
   const hot = rows.filter(r=>r.avgHeat!=null).sort((a,b)=> b.avgHeat-a.avgHeat);
   const multi = scorers.length>=2;
+  const wgbRows = rows.filter(r=>r.wgbCount>0).sort((a,b)=> b.wgbRate-a.wgbRate);
+  const multiW = wgbRows.length>=2;
+  const spreadRows = rows.filter(r=>r.spread!=null).sort((a,b)=> a.spread-b.spread);
+  const multiSp = spreadRows.length>=2;
+
+  const rank = ranking();
+  const bestByCat = SCORE_FIELDS.map(f=>{
+    const withCat = rank.filter(r=>r.cat[f.key]!=null);
+    if(!withCat.length) return null;
+    const best = withCat.reduce((a,b)=> b.cat[f.key] > a.cat[f.key] ? b : a);
+    return { label:f.label, venue:best.venue.name, score:round1(best.cat[f.key]) };
+  }).filter(Boolean);
+
+  const clubCat = SCORE_FIELDS.map(f=>{
+    const vals = state.ratings.map(r=>r[f.key]).filter(v=>typeof v==="number");
+    return vals.length ? { label:f.label, avg:round1(avg(vals)) } : null;
+  }).filter(Boolean).sort((a,b)=> b.avg-a.avg);
+  const bestCat = clubCat[0], worstCat = clubCat[clubCat.length-1];
+  const totalChillies = state.ratings.reduce((s,r)=> s + (r.main_heat||0) + (r.starter_heat||0), 0);
+  const dates = state.visits.map(v=>v.visited_on).filter(Boolean).sort();
+  let cadence = "";
+  if(dates.length>=2){
+    const days = (new Date(dates[dates.length-1]) - new Date(dates[0]))/86400000;
+    cadence = `About ${round1(state.visits.length / Math.max(days/30.44, 0.5))} a month`;
+  }
 
   view.innerHTML = `
     <div class="sectiontitle">Stats</div>
@@ -779,9 +811,36 @@ function renderStats(){
     </div>
 
     <div class="card">
+      <h3 class="stat-h">Easiest to please</h3>
+      <div class="stat-sub">How often each of you would go back</div>
+      ${wgbRows.length ? wgbRows.map((r,i)=>`<div class="statrow"><span class="sr-name">${esc(r.name)}${multiW&&i===0?` <span class="tag gen">easiest</span>`:``}${multiW&&i===wgbRows.length-1?` <span class="tag harsh">toughest</span>`:``}</span><span class="sr-val">${Math.round(r.wgbRate*100)}% would return</span></div>`).join("") : `<div class="hint">No would-go-back answers yet.</div>`}
+    </div>
+
+    <div class="card">
+      <h3 class="stat-h">Consistent or all over the shop</h3>
+      <div class="stat-sub">How much each of your scores jump around</div>
+      ${spreadRows.length ? spreadRows.map((r,i)=>`<div class="statrow"><span class="sr-name">${esc(r.name)}${multiSp&&i===0?` <span class="tag gen">most consistent</span>`:``}${multiSp&&i===spreadRows.length-1?` <span class="tag harsh">biggest swinger</span>`:``}</span><span class="sr-val">±${r.spread}</span></div>`).join("") : `<div class="hint">Needs a couple of ratings each to compare.</div>`}
+    </div>
+
+    <div class="card">
       <h3 class="stat-h">Chilli heads</h3>
       <div class="stat-sub">Who rates their own curries hottest, on average</div>
       ${hot.length ? hot.map((r,i)=>`<div class="statrow"><span class="sr-rank">${i+1}</span><span class="sr-name">${esc(r.name)}</span><span class="sr-val">${heatChillies(Math.round(r.avgHeat))}<span>${r.avgHeat}</span></span></div>`).join("") : `<div class="hint">No heat logged yet. Add a chilli heat rating on your mains.</div>`}
+    </div>
+
+    <div class="card">
+      <h3 class="stat-h">Best for each thing</h3>
+      <div class="stat-sub">The top venue in every category</div>
+      ${bestByCat.length ? bestByCat.map(b=>`<div class="statrow"><span class="sr-name">${esc(b.label)}</span><span class="sr-val">${esc(b.venue)} · ${b.score}</span></div>`).join("") : `<div class="hint">Rate a few venues to crown category winners.</div>`}
+    </div>
+
+    <div class="card">
+      <h3 class="stat-h">Club report card</h3>
+      ${bestCat ? `<div class="statrow"><span class="sr-name">Strong suit</span><span class="sr-val">${esc(bestCat.label)} · ${bestCat.avg}</span></div>` : ``}
+      ${clubCat.length>=2 ? `<div class="statrow"><span class="sr-name">Could do better</span><span class="sr-val">${esc(worstCat.label)} · ${worstCat.avg}</span></div>` : ``}
+      ${cadence ? `<div class="statrow"><span class="sr-name">How often we meet</span><span class="sr-val">${cadence}</span></div>` : ``}
+      <div class="statrow"><span class="sr-name">Curries rated</span><span class="sr-val">${state.ratings.length}</span></div>
+      <div class="statrow"><span class="sr-name">Chillies braved</span><span class="sr-val">${totalChillies}</span></div>
     </div>`;
 }
 
