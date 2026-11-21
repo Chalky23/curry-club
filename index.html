@@ -817,7 +817,7 @@ function renderStats(){
     </div>
 
     <div class="card">
-      <h3 class="stat-h">Consistent or all over the shop</h3>
+      <h3 class="stat-h">Consistency</h3>
       <div class="stat-sub">How much each of your scores jump around</div>
       ${spreadRows.length ? spreadRows.map((r,i)=>`<div class="statrow"><span class="sr-name">${esc(r.name)}${multiSp&&i===0?` <span class="tag gen">most consistent</span>`:``}${multiSp&&i===spreadRows.length-1?` <span class="tag harsh">biggest swinger</span>`:``}</span><span class="sr-val">±${r.spread}</span></div>`).join("") : `<div class="hint">Needs a couple of ratings each to compare.</div>`}
     </div>
@@ -829,18 +829,9 @@ function renderStats(){
     </div>
 
     <div class="card">
-      <h3 class="stat-h">Best for each thing</h3>
+      <h3 class="stat-h">Individual winners</h3>
       <div class="stat-sub">The top venue in every category</div>
       ${bestByCat.length ? bestByCat.map(b=>`<div class="statrow"><span class="sr-name">${esc(b.label)}</span><span class="sr-val">${esc(b.venue)} · ${b.score}</span></div>`).join("") : `<div class="hint">Rate a few venues to crown category winners.</div>`}
-    </div>
-
-    <div class="card">
-      <h3 class="stat-h">Club report card</h3>
-      ${bestCat ? `<div class="statrow"><span class="sr-name">Strong suit</span><span class="sr-val">${esc(bestCat.label)} · ${bestCat.avg}</span></div>` : ``}
-      ${clubCat.length>=2 ? `<div class="statrow"><span class="sr-name">Could do better</span><span class="sr-val">${esc(worstCat.label)} · ${worstCat.avg}</span></div>` : ``}
-      ${cadence ? `<div class="statrow"><span class="sr-name">How often we meet</span><span class="sr-val">${cadence}</span></div>` : ``}
-      <div class="statrow"><span class="sr-name">Curries rated</span><span class="sr-val">${state.ratings.length}</span></div>
-      <div class="statrow"><span class="sr-name">Chillies braved</span><span class="sr-val">${totalChillies}</span></div>
     </div>`;
 }
 
