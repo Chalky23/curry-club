@@ -2,7 +2,8 @@
 
 The app is live and hosted on **GitHub Pages**.
 
-- **Live URL:** https://chalky23.github.io/curry-club/
+- **Live URL:** https://curryclub.cc/ (custom domain; the old https://chalky23.github.io/curry-club/ now redirects here)
+- **Custom domain:** curryclub.cc, registered and DNS-hosted at Cloudflare. DNS: four A records on `@` to GitHub Pages IPs (185.199.108-111.153) plus a `www` CNAME to chalky23.github.io, all set to DNS only (grey cloud). The repo's CNAME file holds `curryclub.cc`; GitHub Pages serves HTTPS with Enforce HTTPS on.
 - **Repo:** https://github.com/Chalky23/curry-club (public, required for free Pages)
 - **Source:** Pages serves the `main` branch root. Deploying means committing and
   pushing to `main`; Pages rebuilds in about a minute.
